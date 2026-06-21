@@ -57,7 +57,11 @@ A living log of what's done and what's next, so work can resume at any moment.
 
 🎉 **Shipped.** Live at https://github.com/Lord1Egypt/Amun
 
+## Phase 8 — PyPI release ✅
+- [x] Packaging fix (PR #3): bundle templates/model/data in the wheel; verified clean-venv install.
+- [x] **Published `amun-bci` 1.0.0 to PyPI** → https://pypi.org/project/amun-bci/
+- [x] Verified `pip install amun-bci` from PyPI runs (`amun` CLI exit 0).
+
 ### Open / later (nice-to-haves)
 - Regenerate AI concept art via `tools/gen_assets.py` once Gemini image quota/billing is available.
 - On-device test of the Amun Amulet sketch + a real NeuroSky headset (code is protocol-tested only).
-- Optional: publish to PyPI as `amun-bci`.
