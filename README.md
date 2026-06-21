@@ -40,6 +40,13 @@ into the browser, so the whole thing runs with **no third-party dependencies**.
 ## Quickstart
 
 ```bash
+pip install amun-bci     # https://pypi.org/project/amun-bci/
+amun                     # opens the game in your browser
+```
+
+Or from source:
+
+```bash
 git clone https://github.com/Lord1Egypt/Amun
 cd Amun
 python -m amun           # opens the game in your browser
