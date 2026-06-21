@@ -46,23 +46,31 @@ def test_websocket_upgrade_101_and_state(server):
         f"Connection: Upgrade\r\nSec-WebSocket-Key: {key}\r\n"
         f"Sec-WebSocket-Version: 13\r\n\r\n".encode()
     )
-    # read the handshake response
+    # read the handshake response (keeping any bytes that follow the header)
     resp = b""
     while b"\r\n\r\n" not in resp:
         resp += s.recv(256)
-    head = resp.decode(errors="replace")
+    head, _, rest = resp.partition(b"\r\n\r\n")
+    head = head.decode(errors="replace")
     assert "101" in head.split("\r\n")[0]
     assert f"Sec-WebSocket-Accept: {compute_accept(key)}" in head
 
-    # the server should start streaming state frames
+    # the server streams state frames; buffer until a complete one decodes
     s.settimeout(3)
-    data = s.recv(65536)
-    frame = decode_frame(data)
-    assert frame is not None
-    _, payload, _ = frame
-    msg = json.loads(payload)
-    assert msg["type"] == "state"
-    assert "falcon" in msg
+    buf = bytearray(rest)
+    msg = None
+    for _ in range(120):
+        frame = decode_frame(bytes(buf))
+        if frame is not None:
+            _, payload, consumed = frame
+            del buf[:consumed]
+            candidate = json.loads(payload)
+            if candidate.get("type") == "state":
+                msg = candidate
+                break
+        else:
+            buf += s.recv(65536)
+    assert msg is not None and "falcon" in msg
     s.close()
 
 

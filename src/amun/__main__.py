@@ -33,11 +33,18 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command")
 
     # default: serve / run
-    p.add_argument("--source", choices=["browser", "sim", "replay", "mic"],
-                   default="browser", help="breath source (default: browser mic)")
+    p.add_argument("--source",
+                   choices=["browser", "sim", "replay", "mic", "serial", "neurosky"],
+                   default="browser",
+                   help="signal source (default: browser mic). 'serial'/'neurosky' "
+                        "are optional hardware; they fall back to the mic if absent")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8011)
     p.add_argument("--file", type=Path, help="loudness file for --source replay")
+    p.add_argument("--serial-port", default=None,
+                   help="serial/Bluetooth port for --source serial|neurosky "
+                        "(e.g. /dev/ttyUSB0, /dev/rfcomm0, COM5)")
+    p.add_argument("--baud", type=int, default=None, help="serial baud rate override")
     p.add_argument("--duration", type=float, default=None,
                    help="seconds to run a headless source then exit")
     p.add_argument("--no-browser", action="store_true", help="don't auto-open a browser")
@@ -67,7 +74,7 @@ def main(argv=None) -> int:
     profile = load_or_default()
 
     # Headless sources run the engine directly without a browser.
-    if args.source in ("sim", "replay", "mic"):
+    if args.source in ("sim", "replay", "mic", "serial", "neurosky"):
         from .ingestion import make_source
         from .server import run_headless
 
@@ -77,18 +84,46 @@ def main(argv=None) -> int:
                 print("error: --source replay requires --file", file=sys.stderr)
                 return 2
             kwargs["path"] = args.file
+        if args.source in ("serial", "neurosky"):
+            if not args.serial_port:
+                print(f"error: --source {args.source} requires --serial-port",
+                      file=sys.stderr)
+                return 2
+            kwargs["port"] = args.serial_port
+            if args.baud:
+                kwargs["baud"] = args.baud
+
         source = make_source(args.source, **kwargs)
+
+        # Hardware sources may be absent — start them first and, if that fails,
+        # fall back to the always-available browser microphone. "Works anyway."
+        started = False
+        if args.source in ("serial", "neurosky", "mic"):
+            try:
+                source.start()
+                started = True
+            except RuntimeError as exc:
+                print(f"\n  ⚠ {args.source} unavailable:\n    "
+                      f"{str(exc).splitlines()[0]}")
+                print("  → falling back to the browser microphone.\n")
+                return _serve_browser(args, profile)
+
         if not args.quiet:
             print(_banner())
             print(f"  running headless source={args.source} "
                   f"duration={args.duration or '∞'}\n")
         final = run_headless(source, profile=profile, duration=args.duration,
-                             quiet=args.quiet)
+                             quiet=args.quiet, already_started=started)
         if not args.quiet:
             print(f"  final score: {final['score']}  ankhs: {final['ankhs']}")
         return 0
 
     # Default: browser game.
+    return _serve_browser(args, profile)
+
+
+def _serve_browser(args, profile) -> int:
+    """Serve the browser game (microphone in the page). The guaranteed path."""
     from .server import run_server
 
     httpd = run_server(host=args.host, port=args.port, profile=profile,
@@ -102,9 +137,9 @@ def main(argv=None) -> int:
 
     if args.no_input:
         # bounded run for automation
-        deadline = time.monotonic() + (args.duration or 1.0)
         import threading
 
+        deadline = time.monotonic() + (args.duration or 1.0)
         t = threading.Thread(target=httpd.serve_forever, daemon=True)
         t.start()
         while time.monotonic() < deadline:
