@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Amun · Breath–Computer Interface</title>
+<style>
+  :root{
+    --gold:#f5c451; --teal:#37e0d8; --sand:#caa46a; --ink:#070a18;
+    --violet:#2a1a4a; --rose:#ff6b9d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--ink); color:#eae6ff; overflow:hidden;
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  #stage{position:fixed; inset:0}
+  canvas{display:block; width:100%; height:100%}
+
+  /* ── HUD ── */
+  .hud{position:fixed; inset:0; pointer-events:none; z-index:5}
+  .title{
+    position:absolute; top:18px; left:24px;
+    font-weight:800; letter-spacing:.34em; font-size:15px;
+    color:var(--gold); text-shadow:0 0 18px rgba(245,196,81,.45);
+  }
+  .title small{display:block; letter-spacing:.18em; font-size:10px; font-weight:600;
+    color:var(--teal); opacity:.85; margin-top:4px}
+  .scorebox{position:absolute; top:16px; right:24px; text-align:right}
+  .score{font-size:40px; font-weight:800; color:#fff; line-height:1;
+    text-shadow:0 0 22px rgba(55,224,216,.5)}
+  .ankhs{font-size:13px; color:var(--gold); letter-spacing:.14em; margin-top:6px}
+
+  /* breath meter */
+  .meter{position:absolute; left:24px; bottom:24px; width:18px; height:200px;
+    border:1px solid rgba(245,196,81,.4); border-radius:10px; overflow:hidden;
+    background:rgba(10,12,28,.55); backdrop-filter:blur(4px)}
+  .meter>i{position:absolute; left:0; right:0; bottom:0; height:0%;
+    background:linear-gradient(180deg,var(--rose),var(--gold),var(--teal));
+    transition:height .06s linear}
+  .meterlabel{position:absolute; left:20px; bottom:24px; font-size:10px;
+    letter-spacing:.22em; color:var(--teal); writing-mode:vertical-rl; height:200px;
+    display:flex; align-items:center}
+
+  .status{position:absolute; left:50%; bottom:26px; transform:translateX(-50%);
+    font-size:12px; letter-spacing:.2em; color:#b9b2e0; text-transform:uppercase}
+  .dot{display:inline-block; width:8px; height:8px; border-radius:50%;
+    background:#ff5d5d; margin-right:8px; vertical-align:middle}
+  .dot.ok{background:var(--teal); box-shadow:0 0 10px var(--teal)}
+
+  /* ── overlays ── */
+  .overlay{position:fixed; inset:0; z-index:20; display:flex; align-items:center;
+    justify-content:center; background:radial-gradient(circle at 50% 35%,
+    rgba(42,26,74,.82),rgba(7,10,24,.94)); backdrop-filter:blur(6px)}
+  .panel{width:min(560px,90vw); padding:38px 40px; border-radius:20px; text-align:center;
+    background:linear-gradient(160deg,rgba(26,17,64,.92),rgba(10,12,28,.92));
+    border:1px solid rgba(245,196,81,.28);
+    box-shadow:0 30px 90px rgba(0,0,0,.6), inset 0 0 60px rgba(55,224,216,.05)}
+  .glyph{font-size:46px; color:var(--gold); text-shadow:0 0 30px rgba(245,196,81,.5)}
+  .panel h1{font-size:30px; letter-spacing:.12em; margin:10px 0 4px; color:#fff}
+  .panel h1 span{color:var(--teal)}
+  .panel p{color:#c4bce6; line-height:1.7; font-size:14px; margin:14px auto; max-width:42ch}
+  .keys{display:flex; gap:14px; justify-content:center; margin:22px 0; flex-wrap:wrap}
+  .keycap{padding:10px 14px; border-radius:10px; font-size:12px; min-width:120px;
+    background:rgba(55,224,216,.08); border:1px solid rgba(55,224,216,.25); color:#dff7f5}
+  .keycap b{display:block; font-size:18px; color:var(--gold); margin-bottom:4px}
+  .btn{pointer-events:auto; cursor:pointer; margin:6px; padding:13px 30px; font-size:14px;
+    font-weight:700; letter-spacing:.14em; border:none; border-radius:12px; color:#0a0a16;
+    background:linear-gradient(135deg,var(--gold),#ffd97a);
+    box-shadow:0 10px 30px rgba(245,196,81,.3); transition:transform .12s}
+  .btn:hover{transform:translateY(-2px)}
+  .btn.ghost{background:transparent; color:var(--teal);
+    border:1px solid rgba(55,224,216,.4); box-shadow:none}
+  .small{font-size:11px; color:#8d86b8; letter-spacing:.16em; margin-top:18px}
+  .calbar{height:10px; border-radius:6px; background:rgba(255,255,255,.08);
+    overflow:hidden; margin:18px auto; width:70%}
+  .calbar>i{display:block; height:100%; width:0%; background:var(--teal);
+    transition:width .1s}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+  <div id="stage"><canvas id="c"></canvas></div>
+
+  <div class="hud">
+    <div class="title">𓅃 AMUN<small>BREATH · COMPUTER · INTERFACE</small></div>
+    <div class="scorebox">
+      <div class="score" id="score">0</div>
+      <div class="ankhs"><span id="ankhs">0</span> ☥ ANKHS</div>
+    </div>
+    <div class="meter"><i id="meterfill"></i></div>
+    <div class="meterlabel">BREATH</div>
+    <div class="status"><span class="dot" id="dot"></span><span id="statustxt">connecting…</span></div>
+  </div>
+
+  <!-- intro -->
+  <div class="overlay" id="intro">
+    <div class="panel">
+      <div class="glyph">𓅃</div>
+      <h1>A M <span>U N</span></h1>
+      <p>The original drove a car with <b>brain</b> waves. Amun keeps the acronym
+         and changes the principle — a <b>Breath</b>–Computer Interface. Pilot the
+         falcon of Horus across the sky of Egypt using only your breath.</p>
+      <div class="keys">
+        <div class="keycap"><b>silence</b>dive · gravity</div>
+        <div class="keycap"><b>soft breath</b>glide level</div>
+        <div class="keycap"><b>hard exhale</b>climb high</div>
+      </div>
+      <button class="btn" id="startMic">🎙 Use my breath</button>
+      <button class="btn ghost" id="startKeys">⌨ Use SPACE instead</button>
+      <div class="small">no microphone? hold <b>SPACE</b> to breathe · nothing leaves your device</div>
+    </div>
+  </div>
+
+  <!-- calibration -->
+  <div class="overlay hidden" id="cal">
+    <div class="panel">
+      <div class="glyph" id="calglyph">𓂀</div>
+      <h1 id="caltitle">Calibrate</h1>
+      <p id="calmsg">Let's learn your breath. Follow each step.</p>
+      <div class="calbar"><i id="calfill"></i></div>
+      <button class="btn" id="calnext">Begin</button>
+      <div class="small">three quick steps · ~9 seconds</div>
+    </div>
+  </div>
+
+  <!-- game over -->
+  <div class="overlay hidden" id="over">
+    <div class="panel">
+      <div class="glyph">𓆄</div>
+      <h1>The falcon <span>rests</span></h1>
+      <p>Distance and ankhs are weighed.</p>
+      <div class="score" style="font-size:54px" id="finalscore">0</div>
+      <div class="ankhs" style="margin:8px 0 6px"><span id="finalankhs">0</span> ☥ collected</div>
+      <button class="btn" id="again">↻ Fly again</button>
+      <button class="btn ghost" id="recal">Re-calibrate</button>
+    </div>
+  </div>
+
+<script>
+"use strict";
+const W = 100, H = 100;                       // world units (match engine.py)
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+let cw = 0, ch = 0;
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  cw = canvas.clientWidth; ch = canvas.clientHeight;
+  canvas.width = cw * DPR; canvas.height = ch * DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize", resize); resize();
+
+// world -> screen
+const sx = x => (x / W) * cw;
+const sy = y => (1 - y / H) * ch;
+const sh = v => (v / H) * ch;
+
+// ── state from server ──────────────────────────────────────────────────────
+let state = {falcon:{x:28,y:50,r:3.2}, obstacles:[], score:0, ankhs:0,
+             alive:true, started:false, breath:0, wing:0};
+let liftMeter = 0;
+
+// ── networking ─────────────────────────────────────────────────────────────
+let ws = null, wsReady = false;
+function connect(){
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => { wsReady = true; setStatus("connected", true); };
+  ws.onclose = () => { wsReady = false; setStatus("reconnecting…", false);
+                       setTimeout(connect, 1000); };
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.type === "state"){
+      const wasAlive = state.alive;
+      state = m; liftMeter = m.lift ?? m.breath ?? 0;
+      if (wasAlive && !m.alive) showGameOver();
+    } else if (m.type === "calibrated"){
+      onCalibrated(m.profile);
+    }
+  };
+}
+function send(obj){ if (wsReady) ws.send(JSON.stringify(obj)); }
+function setStatus(t, ok){
+  document.getElementById("statustxt").textContent = t;
+  document.getElementById("dot").classList.toggle("ok", !!ok);
+}
+
+// ── breath input: microphone OR keyboard ───────────────────────────────────
+let audioCtx=null, analyser=null, micData=null, micActive=false;
+let keyBreath = 0, keyHeld = false;
+
+async function startMic(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:{
+      echoCancellation:false, noiseSuppression:false, autoGainControl:false}});
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    micData = new Float32Array(analyser.fftSize);
+    src.connect(analyser);
+    micActive = true;
+    return true;
+  }catch(e){ return false; }
+}
+function readMicRMS(){
+  if (!micActive) return 0;
+  analyser.getFloatTimeDomainData(micData);
+  let s = 0;
+  for (let i=0;i<micData.length;i++) s += micData[i]*micData[i];
+  return Math.sqrt(s/micData.length);
+}
+// keyboard fallback synthesises a breath-like loudness around the soft/hard range
+window.addEventListener("keydown", e => { if (e.code==="Space"){ keyHeld=true; e.preventDefault(); }});
+window.addEventListener("keyup",   e => { if (e.code==="Space"){ keyHeld=false; }});
+function readBreath(){
+  if (micActive) return readMicRMS();
+  // emulate calibrated scale: SPACE ~ a hard exhale, ramps for nicer feel
+  keyBreath += ((keyHeld?0.22:0.0) - keyBreath) * 0.25;
+  return keyBreath;
+}
+
+// stream breath at ~60Hz
+setInterval(() => { if (running) send({type:"breath", rms: readBreath()}); }, 16);
+
+// ── render loop ─────────────────────────────────────────────────────────────
+let dunes = [];
+for (let i=0;i<40;i++) dunes.push({x:Math.random()*W, h:6+Math.random()*10, s:0.3+Math.random()*0.4});
+let stars = [];
+for (let i=0;i<90;i++) stars.push({x:Math.random(), y:Math.random()*0.7, r:Math.random()*1.4, t:Math.random()*6});
+
+let scroll = 0;
+function draw(ts){
+  scroll += 0.4;
+  // sky
+  const g = ctx.createLinearGradient(0,0,0,ch);
+  g.addColorStop(0,"#0a0f2a"); g.addColorStop(.45,"#1a1140");
+  g.addColorStop(.8,"#3a2150"); g.addColorStop(1,"#5a2f44");
+  ctx.fillStyle=g; ctx.fillRect(0,0,cw,ch);
+
+  // stars
+  for (const st of stars){
+    const tw = 0.5+0.5*Math.sin(ts/600 + st.t);
+    ctx.globalAlpha = 0.25+0.6*tw*(1-st.y);
+    ctx.fillStyle="#fff";
+    ctx.beginPath(); ctx.arc(st.x*cw,(st.y)*ch,st.r,0,7); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // sun / disc of Ra
+  const sunx=cw*0.78, suny=ch*0.30, sr=Math.min(cw,ch)*0.12;
+  const sg=ctx.createRadialGradient(sunx,suny,4,sunx,suny,sr);
+  sg.addColorStop(0,"rgba(255,224,150,.95)"); sg.addColorStop(.6,"rgba(245,196,81,.5)");
+  sg.addColorStop(1,"rgba(245,196,81,0)");
+  ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sunx,suny,sr,0,7); ctx.fill();
+
+  // parallax pyramids
+  drawPyramids(ch*0.74, "#241a3a", 0.5, 0);
+  drawPyramids(ch*0.80, "#2e2147", 0.8, 30);
+
+  // dunes (ground)
+  ctx.fillStyle="#1c1226";
+  ctx.fillRect(0, ch*0.9, cw, ch*0.1);
+  ctx.fillStyle="#caa46a"; ctx.globalAlpha=0.12;
+  ctx.fillRect(0, ch*0.9, cw, ch*0.1); ctx.globalAlpha=1;
+
+  // obstacles (temple columns with a gap)
+  for (const ob of state.obstacles){
+    drawColumn(ob);
+    if (ob.ankh) drawAnkh(sx(ob.x), sy(ob.gap_center));
+  }
+
+  // falcon
+  drawFalcon(sx(state.falcon.x), sy(state.falcon.y), state.wing||0, state.breath||0);
+
+  // breath particles
+  if ((state.breath||0) > 0.5) emitGust(sx(state.falcon.x)-10, sy(state.falcon.y));
+  drawParticles();
+
+  // HUD numbers
+  document.getElementById("score").textContent = state.score|0;
+  document.getElementById("ankhs").textContent = state.ankhs|0;
+  document.getElementById("meterfill").style.height = Math.round(liftMeter*100)+"%";
+
+  requestAnimationFrame(draw);
+}
+
+function drawPyramids(base, color, alpha, off){
+  ctx.fillStyle=color; ctx.globalAlpha=alpha;
+  const n=5, span=cw/n;
+  const shift=(scroll*0.15+off)% span;
+  for (let i=-1;i<=n;i++){
+    const x=i*span - shift + span*0.5;
+    const w=span*0.7, h=span*0.55;
+    ctx.beginPath(); ctx.moveTo(x,base); ctx.lineTo(x+w/2,base-h);
+    ctx.lineTo(x+w,base); ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawColumn(ob){
+  const x = sx(ob.x), gapTop = sy(ob.gap_center+ob.gap_half),
+        gapBot = sy(ob.gap_center-ob.gap_half), w = sx(6)-sx(0);
+  const grad = ctx.createLinearGradient(x,0,x+w,0);
+  grad.addColorStop(0,"#3a2a18"); grad.addColorStop(.5,"#caa46a"); grad.addColorStop(1,"#3a2a18");
+  ctx.fillStyle=grad;
+  // top column
+  ctx.fillRect(x-w/2, 0, w, gapTop);
+  ctx.fillRect(x-w/2-3, gapTop-10, w+6, 12);   // capital
+  // bottom column
+  ctx.fillRect(x-w/2, gapBot, w, ch-gapBot);
+  ctx.fillRect(x-w/2-3, gapBot-2, w+6, 12);
+  // hieroglyph fluting
+  ctx.strokeStyle="rgba(40,26,12,.5)"; ctx.lineWidth=1;
+  for (let k=-1;k<=1;k++){
+    ctx.beginPath(); ctx.moveTo(x+k*w*0.28,0); ctx.lineTo(x+k*w*0.28,gapTop); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x+k*w*0.28,gapBot); ctx.lineTo(x+k*w*0.28,ch); ctx.stroke();
+  }
+  // teal glow rim on the gap
+  ctx.strokeStyle="rgba(55,224,216,.5)"; ctx.lineWidth=2;
+  ctx.strokeRect(x-w/2, gapTop, w, 2);
+  ctx.strokeRect(x-w/2, gapBot-2, w, 2);
+}
+
+function drawAnkh(x,y){
+  ctx.save(); ctx.translate(x,y); ctx.scale(1,1);
+  ctx.shadowColor="#f5c451"; ctx.shadowBlur=18;
+  ctx.strokeStyle="#ffe08a"; ctx.lineWidth=3; ctx.lineCap="round";
+  ctx.beginPath(); ctx.arc(0,-8,5,0,7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-3); ctx.lineTo(0,12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-7,2); ctx.lineTo(7,2); ctx.stroke();
+  ctx.restore();
+}
+
+function drawFalcon(x,y,wing,breath){
+  const s = Math.max(cw,ch)*0.018;
+  const flap = Math.sin(wing)*0.6;
+  ctx.save(); ctx.translate(x,y);
+  // thrust glow
+  if (breath>0.05){
+    ctx.shadowColor="rgba(55,224,216,"+Math.min(0.9,breath)+")"; ctx.shadowBlur=24*breath;
+  }
+  // body
+  ctx.fillStyle="#1c2440"; ctx.strokeStyle="#37e0d8"; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.ellipse(0,0,s*1.5,s*0.8,0,0,7); ctx.fill(); ctx.stroke();
+  // wings
+  ctx.fillStyle="#f5c451";
+  ctx.beginPath();
+  ctx.moveTo(-s*0.2,0);
+  ctx.quadraticCurveTo(-s*1.4, -s*(1.6+flap), -s*2.6, -s*(0.2+flap));
+  ctx.quadraticCurveTo(-s*1.2, s*0.2, -s*0.2, 0);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(s*0.2,0);
+  ctx.quadraticCurveTo(s*1.4, -s*(1.6+flap), s*2.6, -s*(0.2+flap));
+  ctx.quadraticCurveTo(s*1.2, s*0.2, s*0.2, 0);
+  ctx.fill();
+  // head + beak
+  ctx.fillStyle="#1c2440";
+  ctx.beginPath(); ctx.arc(s*1.5,-s*0.3,s*0.6,0,7); ctx.fill();
+  ctx.fillStyle="#f5c451";
+  ctx.beginPath(); ctx.moveTo(s*2.0,-s*0.3); ctx.lineTo(s*2.7,-s*0.1);
+  ctx.lineTo(s*2.0,s*0.1); ctx.fill();
+  // eye of horus mark
+  ctx.fillStyle="#37e0d8";
+  ctx.beginPath(); ctx.arc(s*1.6,-s*0.4,s*0.14,0,7); ctx.fill();
+  ctx.restore();
+}
+
+// particles
+let parts=[];
+function emitGust(x,y){
+  for (let i=0;i<2;i++) parts.push({x,y:y+(Math.random()-0.5)*18,
+    vx:-2-Math.random()*2, life:1, r:1+Math.random()*2});
+}
+function drawParticles(){
+  for (const p of parts){ p.x+=p.vx; p.life-=0.04;
+    ctx.globalAlpha=Math.max(0,p.life)*0.6; ctx.fillStyle="#37e0d8";
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill(); }
+  ctx.globalAlpha=1;
+  parts = parts.filter(p=>p.life>0);
+}
+
+// ── flow control: intro -> (calibrate) -> play -> over ──────────────────────
+let running = false;
+function show(id){ document.getElementById(id).classList.remove("hidden"); }
+function hide(id){ document.getElementById(id).classList.add("hidden"); }
+
+document.getElementById("startMic").onclick = async () => {
+  const ok = await startMic();
+  hide("intro");
+  if (ok) startCalibration(); else { alert("Microphone unavailable — using SPACE."); beginPlay(); }
+};
+document.getElementById("startKeys").onclick = () => { hide("intro"); beginPlay(); };
+document.getElementById("again").onclick = () => { hide("over"); send({type:"reset"}); beginPlay(); };
+document.getElementById("recal").onclick = () => { hide("over"); startCalibration(); };
+
+function beginPlay(){ running = true; send({type:"reset"}); }
+function showGameOver(){
+  running = false;
+  document.getElementById("finalscore").textContent = state.score|0;
+  document.getElementById("finalankhs").textContent = state.ankhs|0;
+  show("over");
+}
+
+// ── calibration: silence / soft / hard ──────────────────────────────────────
+const CAL_STEPS = [
+  {glyph:"𓂀", title:"Be still",   msg:"Stay quiet and breathe normally. Recording your silence."},
+  {glyph:"𓊪", title:"Soft breath", msg:"Now breathe out gently and steadily, like fogging a mirror."},
+  {glyph:"𓊨", title:"Hard exhale", msg:"Now exhale hard, like blowing out candles. Give it everything."},
+];
+let calStep = -1, calSamples = [], calCollecting = false;
+
+function startCalibration(){
+  if (!micActive){ beginPlay(); return; }  // keyboard mode skips calibration
+  calStep = -1; calSamples = [];
+  document.getElementById("calnext").textContent = "Begin";
+  document.getElementById("calmsg").textContent = "Let's learn your breath in 3 quick steps.";
+  document.getElementById("caltitle").textContent = "Calibrate";
+  document.getElementById("calglyph").textContent = "𓂀";
+  document.getElementById("calnext").classList.remove("hidden");
+  show("cal");
+}
+document.getElementById("calnext").onclick = () => {
+  if (calCollecting) return;
+  calStep++;
+  if (calStep >= CAL_STEPS.length){ finishCalibration(); return; }
+  const step = CAL_STEPS[calStep];
+  document.getElementById("calglyph").textContent = step.glyph;
+  document.getElementById("caltitle").textContent = step.title;
+  document.getElementById("calmsg").textContent = step.msg;
+  document.getElementById("calnext").classList.add("hidden");
+  collectStep();
+};
+function collectStep(){
+  calCollecting = true;
+  const fill = document.getElementById("calfill");
+  const t0 = performance.now(), dur = 3000;
+  (function loop(now){
+    const p = Math.min(1,(now-t0)/dur);
+    fill.style.width = (p*100)+"%";
+    calSamples.push(readMicRMS());
+    if (p < 1) requestAnimationFrame(loop);
+    else { calCollecting=false; fill.style.width="0%";
+      const btn=document.getElementById("calnext");
+      btn.classList.remove("hidden");
+      btn.textContent = calStep>=CAL_STEPS.length-1 ? "Finish & fly" : "Next step";
+    }
+  })(t0);
+}
+function finishCalibration(){
+  send({type:"calibrate", samples: calSamples});
+  document.getElementById("caltitle").textContent = "Weighing your breath…";
+  document.getElementById("calmsg").textContent = "Fitting your personal profile.";
+  document.getElementById("calnext").classList.add("hidden");
+}
+function onCalibrated(profile){
+  hide("cal");
+  setStatus("calibrated · silhouette "+(profile.silhouette??0).toFixed(2), true);
+  beginPlay();
+}
+
+connect();
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amun-bci"
+version = "1.0.0"
+description = "Amun — a Breath–Computer Interface. Pilot a falcon with your breath. No electrodes. Just air."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Mohamed Mounir", email = "akim.221992@gmail.com" }]
+keywords = ["breath", "bci", "game", "interface", "audio", "biosignal", "egyptian", "offline"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Games/Entertainment",
+  "Topic :: Multimedia :: Sound/Audio :: Analysis",
+]
+# The core game has ZERO third-party dependencies (the browser captures the mic).
+dependencies = []
+
+[project.optional-dependencies]
+mic = ["sounddevice>=0.4"]            # optional headless/CLI microphone capture
+dev = ["pytest>=7", "numpy>=1.21", "pillow>=9"]  # tests, calibration ML, demo gif
+
+[project.urls]
+Homepage = "https://github.com/Lord1Egypt/Amun"
+Repository = "https://github.com/Lord1Egypt/Amun"
+
+[project.scripts]
+amun = "amun.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

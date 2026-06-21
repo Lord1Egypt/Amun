@@ -1,0 +1,7 @@
+# The Amun core game has ZERO required third-party dependencies.
+# The browser captures the microphone; the server is pure Python stdlib.
+#
+# Install optional extras only if you want them:
+#
+#   pip install -e ".[mic]"   # headless/CLI microphone capture (sounddevice)
+#   pip install -e ".[dev]"   # tests + calibration ML + demo gif (pytest, numpy, pillow)
