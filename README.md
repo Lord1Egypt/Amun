@@ -39,10 +39,18 @@ into the browser, so the whole thing runs with **no third-party dependencies**.
 
 ## Quickstart
 
+Two editions, same game — pick your stack:
+
 ```bash
-pip install amun-bci     # https://pypi.org/project/amun-bci/
-amun                     # opens the game in your browser
+pip install amun-bci     # Python edition  · https://pypi.org/project/amun-bci/
+amun
 ```
+```bash
+npx amun-bci             # JavaScript edition · https://www.npmjs.com/package/amun-bci
+```
+
+- **Python edition** — server-side pipeline + optional Arduino/NeuroSky hardware.
+- **JavaScript edition** ([`web/`](web/)) — runs entirely in the browser, zero deps, no Python.
 
 Or from source:
 

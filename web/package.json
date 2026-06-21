@@ -1,0 +1,43 @@
+{
+  "name": "amun-bci",
+  "version": "1.0.0",
+  "description": "Amun — a Breath–Computer Interface. Pilot a falcon with your breath, in the browser. No electrodes, just air. JavaScript edition of github.com/Lord1Egypt/Amun.",
+  "bin": {
+    "amun": "bin/amun.js"
+  },
+  "type": "commonjs",
+  "files": [
+    "bin/",
+    "public/",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "node bin/amun.js",
+    "test": "node bin/amun.js --selftest"
+  },
+  "keywords": [
+    "breath",
+    "bci",
+    "game",
+    "interface",
+    "audio",
+    "microphone",
+    "biosignal",
+    "egyptian",
+    "offline",
+    "canvas"
+  ],
+  "author": "Mohamed Mounir (Lord1Egypt)",
+  "license": "MIT",
+  "homepage": "https://github.com/Lord1Egypt/Amun#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lord1Egypt/Amun.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Lord1Egypt/Amun/issues"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
