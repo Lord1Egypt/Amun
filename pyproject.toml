@@ -23,6 +23,7 @@ dependencies = []
 
 [project.optional-dependencies]
 mic = ["sounddevice>=0.4"]            # optional headless/CLI microphone capture
+serial = ["pyserial>=3.5"]           # optional Amun Amulet / NeuroSky hardware link
 dev = ["pytest>=7", "numpy>=1.21", "pillow>=9"]  # tests, calibration ML, demo gif
 
 [project.urls]

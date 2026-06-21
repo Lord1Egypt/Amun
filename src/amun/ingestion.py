@@ -129,8 +129,145 @@ class MicSource(BreathSource):
             self._stream = None
 
 
+class SerialSource(BreathSource):
+    """Read a normalised signal (0..1, one float per line) from the *Amun Amulet*.
+
+    The Arduino/ESP32 amulet samples a breath/wind sensor, shows status on its
+    OLED, blinks an RGB LED, and streams a normalised value over USB serial or a
+    Bluetooth (HC-05/HM-10) link that appears as a serial port. Needs the optional
+    ``pyserial`` dependency; raises a clear error if it's missing or the port is
+    absent, so the app can fall back to the microphone.
+    """
+
+    def __init__(self, port: str, baud: int = 115200, timeout: float = 1.0):
+        self.port = port
+        self.baud = baud
+        self.timeout = timeout
+        self._latest = 0.0
+        self._ser = None
+        self._thread = None
+        self._stop = False
+
+    def start(self) -> None:
+        try:
+            import serial  # type: ignore  (pyserial)
+        except Exception as exc:
+            raise RuntimeError(
+                "The 'serial' source needs the optional dependency 'pyserial'.\n"
+                "Install it with:  pip install 'amun[serial]'\n"
+                "Or just use the browser microphone (the default)."
+            ) from exc
+        try:
+            self._ser = serial.Serial(self.port, self.baud, timeout=self.timeout)
+        except Exception as exc:
+            raise RuntimeError(
+                f"Could not open serial port {self.port!r}: {exc}\n"
+                "Check the port name / cable, or fall back to the microphone."
+            ) from exc
+        self._stop = False
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def _run(self) -> None:  # pragma: no cover - needs a device
+        while not self._stop:
+            try:
+                line = self._ser.readline().decode("ascii", "ignore").strip()
+            except Exception:
+                break
+            if not line:
+                continue
+            try:
+                self._latest = max(0.0, min(1.0, float(line)))
+            except ValueError:
+                pass
+
+    def read(self) -> float:
+        return self._latest
+
+    def close(self) -> None:
+        self._stop = True
+        if self._ser is not None:
+            try:
+                self._ser.close()
+            except Exception:
+                pass
+            self._ser = None
+
+
+class NeuroSkySource(BreathSource):
+    """Optional *brain* mode — a NeuroSky MindWave headset over Bluetooth serial.
+
+    This brings the original "control with your mind" idea back as a bonus: the
+    headset's **attention** value (0..100) becomes the throttle. Parsing is done
+    by :mod:`amun.thinkgear` (pure stdlib); the serial link needs ``pyserial``.
+    Gracefully degrades — raise on missing dep/port so the app can use the mic.
+    """
+
+    def __init__(self, port: str, baud: int = 57600, signal: str = "attention"):
+        self.port = port
+        self.baud = baud
+        self.signal = signal  # "attention" or "meditation"
+        self._latest = 0.0
+        self._poor = 200
+        self._ser = None
+        self._thread = None
+        self._stop = False
+
+    def start(self) -> None:
+        try:
+            import serial  # type: ignore
+        except Exception as exc:
+            raise RuntimeError(
+                "The 'neurosky' source needs the optional dependency 'pyserial'.\n"
+                "Install it with:  pip install 'amun[serial]'\n"
+                "Or use the browser microphone (the default)."
+            ) from exc
+        try:
+            self._ser = serial.Serial(self.port, self.baud, timeout=1.0)
+        except Exception as exc:
+            raise RuntimeError(
+                f"Could not open NeuroSky port {self.port!r}: {exc}\n"
+                "Pair the MindWave over Bluetooth, or fall back to the microphone."
+            ) from exc
+        self._stop = False
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def _run(self) -> None:  # pragma: no cover - needs a headset
+        from .thinkgear import ThinkGearParser
+
+        parser = ThinkGearParser()
+        while not self._stop:
+            try:
+                chunk = self._ser.read(64)
+            except Exception:
+                break
+            for reading in parser.feed(chunk):
+                if "poor_signal" in reading:
+                    self._poor = reading["poor_signal"]
+                if self.signal in reading and self._poor < 100:
+                    self._latest = reading[self.signal] / 100.0
+
+    def read(self) -> float:
+        return self._latest
+
+    def close(self) -> None:
+        self._stop = True
+        if self._ser is not None:
+            try:
+                self._ser.close()
+            except Exception:
+                pass
+            self._ser = None
+
+
 def make_source(kind: str, **kwargs) -> BreathSource:
-    """Factory: ``make_source('sim' | 'replay' | 'mic', ...)``."""
+    """Factory for any signal source.
+
+    ``'sim' | 'replay' | 'mic' | 'serial' | 'neurosky'`` — the last three are the
+    optional hardware paths. If a hardware source can't start, the caller should
+    fall back to the microphone (the default, always-available path).
+    """
     kind = (kind or "sim").lower()
     if kind == "sim":
         return SimSource(**kwargs)
@@ -138,4 +275,8 @@ def make_source(kind: str, **kwargs) -> BreathSource:
         return ReplaySource(**kwargs)
     if kind == "mic":
         return MicSource(**kwargs)
-    raise ValueError(f"unknown breath source: {kind!r}")
+    if kind == "serial":
+        return SerialSource(**kwargs)
+    if kind == "neurosky":
+        return NeuroSkySource(**kwargs)
+    raise ValueError(f"unknown signal source: {kind!r}")

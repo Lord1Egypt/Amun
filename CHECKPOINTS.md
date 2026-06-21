@@ -36,14 +36,21 @@ A living log of what's done and what's next, so work can resume at any moment.
 - [ ] `notebooks/breath_eda.ipynb` — honest silhouette on bundled data.
 - [ ] `tools/test_all.py` — full suite, asserts exit 0.
 
-## Phase 5 — Images, demo, docs, README ⏳
-- [ ] `tools/gen_assets.py` — Gemini Nano Banana Pro 2 art + bottom-right watermark crop.
-- [ ] `tools/make_demo.py` — reproducible gameplay GIF (PIL).
-- [ ] `docs/` — ARCHITECTURE, SIGNAL_PIPELINE, CALIBRATION, HARDWARE.
-- [ ] `README.md` — hero + demo + quickstart + honest metrics.
-- [ ] `hardware/` — optional real wind/pressure breath-sensor notes.
+## Phase 5 — Optional hardware ✅
+- [x] `thinkgear.py` — NeuroSky ThinkGear parser (pure stdlib, tested).
+- [x] `SerialSource` (Amun Amulet) + `NeuroSkySource` (EEG attention) with mic fallback.
+- [x] `hardware/amun_amulet.ino` — ESP32/Arduino sketch (sensor + OLED + RGB + buzzer + BT).
+- [x] `docs/HARDWARE.md` — BOM (your parts), wiring, both paths, flashing.
 
-## Phase 6 — Verify & ship ⏳
-- [ ] `pytest` + `tools/test_all.py` green (exit 0).
-- [ ] Headless run + `curl /health` + WS handshake confirmed.
+## Phase 6 — Images, demo, docs, README ✅
+- [x] `tools/gen_assets.py` — Gemini Nano Banana Pro generator + bottom-right watermark crop.
+      ⚠ Gemini image quota exhausted (HTTP 429 — needs billing at ai.dev); kept for later.
+- [x] `tools/_artkit.py` + `tools/make_banner.py` — **offline** hero + logo (no quota, on-brand).
+- [x] `tools/make_demo.py` — reproducible gameplay GIF from the real engine (PIL).
+- [x] `docs/` — ARCHITECTURE, SIGNAL_PIPELINE, CALIBRATION, HARDWARE.
+- [x] `README.md` — hero + demo + quickstart + hardware tiers + honest metrics.
+
+## Phase 7 — Verify & ship ⏳
+- [x] `pytest` + `tools/test_all.py` green (exit 0) — 45 tests.
+- [ ] Headless run + `/health` + WS handshake re-confirmed on a clean checkout.
 - [ ] PR `feat/breath-computer-interface` → merge.

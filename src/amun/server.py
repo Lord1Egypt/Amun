@@ -274,17 +274,19 @@ def run_server(host: str = "127.0.0.1", port: int = 8011,
 
 # ── headless runner (no browser) ──────────────────────────────────────────────
 def run_headless(source, profile=None, duration: Optional[float] = None,
-                 quiet: bool = False) -> dict:
+                 quiet: bool = False, already_started: bool = False) -> dict:
     """Run the engine driven by a :class:`~amun.ingestion.BreathSource`.
 
     Returns the final game state. Used by CI and the demo renderer; never blocks
-    on input.
+    on input. Pass ``already_started=True`` if the caller already started the
+    source (e.g. to detect hardware availability before falling back to the mic).
     """
     profile = profile or load_or_default()
     engine = GameEngine(seed=1)
     env = BreathEnvelope()
     clf = BreathClassifier(profile)
-    source.start()
+    if not already_started:
+        source.start()
     start = time.monotonic()
     last = start
     dt_target = 1.0 / TICK_HZ
