@@ -50,7 +50,14 @@ A living log of what's done and what's next, so work can resume at any moment.
 - [x] `docs/` — ARCHITECTURE, SIGNAL_PIPELINE, CALIBRATION, HARDWARE.
 - [x] `README.md` — hero + demo + quickstart + hardware tiers + honest metrics.
 
-## Phase 7 — Verify & ship ⏳
+## Phase 7 — Verify & ship ✅
 - [x] `pytest` + `tools/test_all.py` green (exit 0) — 45 tests.
-- [ ] Headless run + `/health` + WS handshake re-confirmed on a clean checkout.
-- [ ] PR `feat/breath-computer-interface` → merge.
+- [x] Headless run + WS handshake + `pip install -e .` (zero deps) + `amun` CLI confirmed.
+- [x] PR #1 `feat/breath-computer-interface` → merged to `main`.
+
+🎉 **Shipped.** Live at https://github.com/Lord1Egypt/Amun
+
+### Open / later (nice-to-haves)
+- Regenerate AI concept art via `tools/gen_assets.py` once Gemini image quota/billing is available.
+- On-device test of the Amun Amulet sketch + a real NeuroSky headset (code is protocol-tested only).
+- Optional: publish to PyPI as `amun-bci`.
