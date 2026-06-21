@@ -36,6 +36,9 @@ amun = "amun.__main__:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+amun = ["templates/*.html", "model/*.json", "data/*.csv"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"

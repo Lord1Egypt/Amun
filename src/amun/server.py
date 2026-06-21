@@ -28,9 +28,11 @@ from .classify import BreathClassifier
 from .engine import GameEngine
 from .preprocessing import BreathEnvelope
 
-ROOT = Path(__file__).resolve().parents[2]
-TEMPLATES = ROOT / "templates"
-ASSETS = ROOT / "assets"
+PKG = Path(__file__).resolve().parent
+TEMPLATES = PKG / "templates"
+# Repo-level assets are served in dev if present; absent in an installed wheel
+# (the UI is self-contained, so this route simply 404s gracefully).
+ASSETS = PKG.parents[1] / "assets"
 
 WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"  # RFC 6455 GUID
 TICK_HZ = 60.0

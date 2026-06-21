@@ -16,7 +16,12 @@ from typing import Optional, Sequence
 
 from .classify import CalibrationProfile, fit_profile
 
-DEFAULT_PROFILE_PATH = Path(__file__).resolve().parents[2] / "model" / "profile.json"
+PKG = Path(__file__).resolve().parent
+# Where a calibrated profile is written (user-writable, works when pip-installed).
+DEFAULT_PROFILE_PATH = Path.home() / ".config" / "amun" / "profile.json"
+# Read-only resources bundled inside the package (shipped in the wheel).
+BUNDLED_PROFILE = PKG / "model" / "profile.json"
+BUNDLED_SAMPLE = PKG / "data" / "calibration_sample.csv"
 
 
 def calibrate_from_samples(samples: Sequence[float],
@@ -30,13 +35,14 @@ def calibrate_from_samples(samples: Sequence[float],
 
 
 def load_or_default(path: Optional[Path] = None) -> CalibrationProfile:
-    """Load the saved profile, or fall back to a sane default."""
-    path = Path(path or DEFAULT_PROFILE_PATH)
-    if path.exists():
-        try:
-            return CalibrationProfile.load(path)
-        except Exception:
-            pass
+    """Load the saved profile; fall back to the bundled one, then to defaults."""
+    for candidate in (path or DEFAULT_PROFILE_PATH, BUNDLED_PROFILE):
+        candidate = Path(candidate)
+        if candidate.exists():
+            try:
+                return CalibrationProfile.load(candidate)
+            except Exception:
+                continue
     return CalibrationProfile.default()
 
 
@@ -58,8 +64,6 @@ def calibrate_cli(source_file: Optional[Path] = None,
     if source_file is not None:
         values = _read_values(Path(source_file))
     else:
-        sample = (Path(__file__).resolve().parents[2]
-                  / "data" / "calibration_sample.csv")
-        values = _read_values(sample) if sample.exists() else []
+        values = _read_values(BUNDLED_SAMPLE) if BUNDLED_SAMPLE.exists() else []
     profile = calibrate_from_samples(values, save_to=save_to or DEFAULT_PROFILE_PATH)
     return profile
