@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero.png" alt="Amun — a Breath–Computer Interface" width="100%" />
+<img src="https://raw.githubusercontent.com/Lord1Egypt/Amun/main/assets/hero.png" alt="Amun — a Breath–Computer Interface" width="100%" />
 
 # 𓅃 Amun — a Breath–Computer Interface
 
@@ -9,7 +9,7 @@
 Pilot the falcon of Horus across the Egyptian sky using nothing but your breath.
 Soft breath glides · a hard exhale climbs · silence dives into gravity.
 
-<img src="assets/demo.gif" alt="Amun gameplay" width="80%" />
+<img src="https://raw.githubusercontent.com/Lord1Egypt/Amun/main/assets/demo.gif" alt="Amun gameplay" width="80%" />
 
 </div>
 
@@ -94,7 +94,7 @@ is a **superset** of Invisible-Driver. Full build, BOM and wiring:
 
 ```
 src/amun/      engine · ingestion · preprocessing · features · classify · calibrate · server · thinkgear
-templates/     the browser game (Web Audio mic + canvas renderer)
+src/amun/templates/  the browser game (Web Audio mic + canvas renderer)
 model/         your calibration profile (JSON)
 tools/         sample data · demo-gif · banner/logo · Gemini asset gen · test runner
 tests/         pytest suite (engine · features · classify · websocket · server · thinkgear)
@@ -125,4 +125,4 @@ Live build log: [`CHECKPOINTS.md`](CHECKPOINTS.md).
 
 MIT © 2026 Mohamed Mounir ([Lord1Egypt](https://github.com/Lord1Egypt))
 
-<div align="center"><img src="assets/logo.png" alt="Amun" width="120" /></div>
+<div align="center"><img src="https://raw.githubusercontent.com/Lord1Egypt/Amun/main/assets/logo.png" alt="Amun" width="120" /></div>
